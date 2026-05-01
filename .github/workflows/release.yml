@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read module manifest
+        id: manifest
+        run: |
+          ID=$(node -p "require('./module.json').id")
+          VERSION=$(node -p "require('./module.json').version")
+          TAG=${GITHUB_REF#refs/tags/}
+          if [ "v${VERSION}" != "${TAG}" ]; then
+            echo "::error::tag ${TAG} no coincide con module.json#version (${VERSION})"
+            exit 1
+          fi
+          echo "id=${ID}"           >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build tarball
+        run: |
+          ID=${{ steps.manifest.outputs.id }}
+          VERSION=${{ steps.manifest.outputs.version }}
+          STAGE=$(mktemp -d)
+          mkdir -p "$STAGE/$ID"
+          # Copia solo lo necesario (excluye .git, .github, node_modules, tests, etc.)
+          rsync -a \
+            --exclude '.git' --exclude '.github' --exclude 'node_modules' \
+            --exclude '*.test.js' --exclude 'README.md' --exclude 'LICENSE' \
+            ./ "$STAGE/$ID/"
+          tar -czf "module-${ID}-${VERSION}.tar.gz" -C "$STAGE" "$ID"
+          echo "[release] generado module-${ID}-${VERSION}.tar.gz"
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: module-*.tar.gz
+          generate_release_notes: true

@@ -1,0 +1,9 @@
+{
+  "id": "analytics",
+  "name": "Analíticas",
+  "version": "1.0.0",
+  "convive": ">=0.2.0",
+  "description": "Resúmenes y gráficos de los gastos del hogar.",
+  "icon": "bar-chart-3",
+  "depends": ["expenses", "settlements"]
+}
